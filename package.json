@@ -1,0 +1,22 @@
+{
+  "name": "qa-test-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "qa:check": "node scripts/preflight.mjs",
+    "qa:explore": "node scripts/explore.mjs",
+    "qa:features": "node scripts/parse-features.mjs",
+    "qa:inventory": "node scripts/inventory.mjs",
+    "qa:report": "node scripts/report.mjs",
+    "qa:open": "playwright show-report outcome/latest/report",
+    "qa:test": "bddgen test && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^7.0.2",
+    "yaml": "^2.9.1"
+  }
+}

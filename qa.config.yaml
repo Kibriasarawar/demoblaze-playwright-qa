@@ -1,0 +1,96 @@
+# =============================================================================
+#  Playwright QA Agent — settings
+#  Edit this file. No code needed. Keep the indentation as you see it.
+#  NEVER put a password or a URL with a token in this file — those live in
+#  credentials/.env, which is not committed to git.
+# =============================================================================
+
+# --- 1. What are we testing? -------------------------------------------------
+app:
+  name: "Demoblaze"        # free text, shows up in reports
+  baseUrlEnv: BASE_URL          # the NAME of the variable in credentials/.env
+  environment: staging          # staging | qa | dev   ("production" is refused)
+
+# --- 2. How should the tests be written? -------------------------------------
+# pom = normal Playwright test files    (easiest to debug — recommended)
+# bdd = your .feature files are run directly via playwright-bdd
+mode: bdd
+
+# --- 3. Logging in -----------------------------------------------------------
+auth:
+  # form           = the app has a username/password form (most common)
+  # none           = no login needed
+  # manual-session = you log in by hand once; use this for SSO, OTP, 2FA, CAPTCHA
+  strategy: form
+
+  loginPath: /                  # demoblaze has no /login page - login is a modal on the home page
+  defaultRole: customer         # used when a scenario has no @role tag
+
+  # One entry per test account. userEnv/passEnv are variable NAMES in .env.
+  roles:
+    - name: customer
+      userEnv: CUSTOMER_USER
+      passEnv: CUSTOMER_PASS
+    # - name: admin
+    #   userEnv: ADMIN_USER
+    #   passEnv: ADMIN_PASS
+
+  # How do we know login worked?
+  #   url  -> the browser lands on a path containing this value
+  #   text -> this text appears on the page
+  #   role -> an element with this accessible name appears (e.g. "Log out")
+  successCheck:
+    type: text
+    value: "Welcome"
+
+  sessionMaxAgeMinutes: 60      # re-login only when the saved session is older than this
+
+# --- 4. How to run -----------------------------------------------------------
+run:
+  browsers: [chromium]          # any of: chromium, firefox, webkit
+  headless: true                # false = watch the browser while it runs
+  # MUST stay 1. Every scenario's "Given I am on the home page" empties the
+  # cart, and the cart is server-side per account with ONE shared test account,
+  # so any two scenarios running at once wipe each other's state. See
+  # needs-human.md: the real fix is a second test account or an API to seed a
+  # cart per test.
+  workers: 1
+  retries: 1                    # Playwright's own retry for flaky tests
+  actionTimeoutMs: 10000        # max wait for a click, fill, etc.
+  navigationTimeoutMs: 30000    # max wait for a page load
+  viewport:
+    width: 1440
+    height: 900
+
+# --- 5. How the agent should behave -----------------------------------------
+agent:
+  maxAutoFixAttempts: 3         # then it stops and asks a human
+  testIdAttribute: data-testid  # change if your app uses data-test or data-cy
+  locatorStrategy: [role, label, placeholder, testId, text]
+
+  # flag = write vague steps to needs-human.md and carry on
+  # ask  = stop and ask you what the step means
+  onVagueStep: flag
+
+  # false = never click Delete, Pay, Send, or anything irreversible
+  # Set to true on 2026-10-27, approved by the tester. Scope:
+  #  - emptying the test account's cart (Delete on each cart row), so cart
+  #    scenarios start from a known state. The cart is server-side per account
+  #    and survives between runs.
+  #  - deleting a named cart row, for the cart-management scenarios.
+  #  - sending the contact form (the @destructive contact scenario).
+  # Completing a purchase is tagged @destructive by the tester too, but those
+  # two scenarios are @skip for now: the sandbox blocks completing a purchase,
+  # so the confirmation markup is unverified. See needs-human.md.
+  allowDestructiveActions: true
+
+  # safety cap on how much the agent clicks around a live app per module
+  explorationBudget: 40
+
+# --- 6. Reports --------------------------------------------------------------
+report:
+  outputDir: outcome
+  keepLastRuns: 10              # older run folders are deleted
+  screenshots: only-on-failure  # off | only-on-failure | on
+  video: retain-on-failure      # off | retain-on-failure | on
+  trace: retain-on-failure      # off | retain-on-failure | on
